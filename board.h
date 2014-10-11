@@ -45,31 +45,148 @@ Board newBoard() {
 	}
 
 	board->getSpace = getSpace;
+	board->isColumnFull = isColumnFull;
+	board->dropPiece = dropPiece;
 	board->draw = draw;
+	board->checkForWin = checkForWin;
+	board->destroyBoard = destroyBoard;
+	board->getBitBoard = getBitBoard;
 
 	return board;
+}
+
+bool isBoardEmpty(Board b) {
+	bool empty = TRUE;
+	Space current;
+	int x, y;
+
+	for(x = 5; x >= 0; x--) {
+		for(y = 6; y >= 0; y--) {
+			current = b->getSpace(b, x, y);
+			if(!current->isSpaceEmpty(current)) return FALSE;
+		}
+	}
+
+	return TRUE;
 }
 
 Space getSpace(Board b, int x, int y) {
 	return b->spaces[x][y];
 }
 
-void draw(Board b, int offsetX, int offsetY) {
-	int i, j;
+bool isColumnFull(Board b, int col) {
+	int x;
 	Space current;
 
-	gotoxy(offsetX, offsetY);
-	printf("+=+=+=+=+=+=+=+");
+	if(col < 0 || col > 6) return FALSE;
+	for(x = 5; x >= 0; x--) {
+		current = b->getSpace(b, x, col);
+		if(current->isSpaceEmpty(current)) return FALSE;
+	}
+
+	return TRUE;
+}
+
+void dropPiece(Board b, int player, int col) {
+	int x;
+	Space current;
+
+	for(x = 5; x >= 0; x--) {
+		current = b->getSpace(b, x, col);
+		if(current->isSpaceEmpty(current)) {
+			current->put(current, player);
+			break;
+		}
+	}
+}
+
+/* Here be dragons */
+void draw(WINDOW * win, Board b, int offsetY, int offsetX) {
+	int i, j, temp;
+	Space current;
+
+	wmove(win, offsetY, offsetX); clrtoeol();
+	addch(ACS_ULCORNER); addch(ACS_HLINE); addch(ACS_TTEE); addch(ACS_HLINE);
+	addch(ACS_TTEE); addch(ACS_HLINE); addch(ACS_TTEE); addch(ACS_HLINE); addch(ACS_TTEE);
+	addch(ACS_HLINE); addch(ACS_TTEE); addch(ACS_HLINE); addch(ACS_TTEE); addch(ACS_HLINE);
+	addch(ACS_URCORNER);
 	for(i = 0; i < 6; i++) {
-		gotoxy(offsetX, offsetY+(i*2)+1);
-		printf("|");
+		wmove(win, offsetY+i+1, offsetX); clrtoeol(); addch(ACS_VLINE);
 		for(j = 0; j < 7; j++) {
 			current = b->getSpace(b, i, j);
-			gotoxy(offsetX+(j*2)+1, offsetY+i+1);
-			printf("%c|", current->get(current));
+			if(current->hasWinningTile(current)) wattron(win, A_BLINK);
+			wattron(win, COLOR_PAIR(current->getOwner(current)+2));
+			wmove(win, offsetY+i+1, offsetX+(j*2)+1); clrtoeol(); addch(' ');
+			wattroff(win, COLOR_PAIR(current->getOwner(current)+2));
+			if(current->hasWinningTile(current)) wattroff(win, A_BLINK);
+			addch(ACS_VLINE);
 		}
-		gotoxy(offsetX, offsetY+i+2);
-		printf("+=+=+=+=+=+=+=+");
+	}
+	wmove(win, offsetY+i+1, offsetX); clrtoeol();
+	addch(ACS_LLCORNER); addch(ACS_HLINE); addch(ACS_BTEE); addch(ACS_HLINE);
+	addch(ACS_BTEE); addch(ACS_HLINE); addch(ACS_BTEE); addch(ACS_HLINE); addch(ACS_BTEE);
+	addch(ACS_HLINE); addch(ACS_BTEE); addch(ACS_HLINE); addch(ACS_BTEE); addch(ACS_HLINE);
+	addch(ACS_LRCORNER);
+	wrefresh(win);
+}
+
+/**
+ *	Board checking algorithm by Christian Ammer 
+ *	http://stackoverflow.com/a/7053051
+ *
+ *	Full code @ GitHub
+ *	
+ */
+bool checkForWin(Board b, int player) {
+	unsigned long long int bitboard = b->getBitBoard(b, player);
+	bitboard &= bitboard >> 6;
+
+	if (bitboard & (bitboard >> 2 * 6))     // check \ diagonal
+        return TRUE;
+    bitboard &= bitboard >> 7;
+    if (bitboard & (bitboard >> 2 * 7))     // check horizontal
+        return TRUE;
+    bitboard &= bitboard >> 8;
+    if (bitboard & (bitboard >> 2 * 8))     // check / diagonal
+        return TRUE;
+    bitboard &= bitboard >> 1;
+    if (bitboard & (bitboard >> 2))         // check vertical
+        return TRUE;
+    return FALSE;
+}
+
+void destroyBoard(Board b) {
+	Space current;
+	int x, y;
+
+	for(x = 0; x < 6; x++) {
+		for(y = 0; y < 7; y++) {
+			current = b->getSpace(b, x, y);
+			current->destroySpace(current);
+			b->spaces[x][y] = NULL;
+		}
+		free(b->spaces[x]);
+		b->spaces[x] = NULL;
+	}
+
+	free(b->spaces);
+	b->spaces = NULL;
+}
+
+unsigned long long int getBitBoard(Board b, int player) {
+	unsigned long long int bitboard = 0;
+	int x, y, count = 0;
+	Space current;
+
+	for(y = 0; x < 7; y++) {
+		for(x = 5; y >= 0; x--) {
+			current = b->getSpace(b, x, y);
+			if(current->getOwner(current) == player) {
+				bitboard |= 1 >> count;
+			}
+			count++;
+		}
+		count++;
 	}
 }
 
