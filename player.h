@@ -50,8 +50,8 @@ bool doMove(Player p, int key) {
 			if(p->pointer > 12) p->pointer = 0;
 			break;
 		case 10: /* Windows Enter */
-			if(p->b->isColumnFull(p->b, p->pointer/2)) return FALSE;
 			/* If column is full, allow player to choose another column */
+			if(p->b->isColumnFull(p->b, p->pointer/2)) return FALSE;
 			p->b->dropPiece(p->b, p->id, p->pointer/2);
 			return TRUE;
 	}
