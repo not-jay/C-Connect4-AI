@@ -2,21 +2,35 @@
 #define __board_h
 
 #include <stdio.h>
-#include <conio.h>
+#include <curses.h>
 #include <stdlib.h>
 #include "space.h"
 
 struct board {
-	Space **spaces;
-	Space (*getSpace)(struct board *, int, int);
-	void (*draw)(struct board *, int, int);
+	Space	 **spaces;
+	bool	(*isBoardEmpty)(struct board *);
+	Space	(*getSpace)(struct board *, int, int);
+	bool	(*isColumnFull)(struct board *, int);
+	void	(*dropPiece)(struct board *, int, int);
+	void	(*draw)(WINDOW *, struct board *, int, int);
+	bool	(*checkForWin)(struct board *, int);
+	void	(*destroyBoard)(struct board *);
+	unsigned long long int
+			(*getBitBoard)(struct board *, int);
 };
 
 typedef struct board *Board;
 
 Board	newBoard();
+bool	isBoardEmpty(Board);
 Space	getSpace(Board, int, int);
-void	draw(Board, int, int);
+bool	isColumnFull(Board, int);
+void	dropPiece(Board, int, int);
+void	draw(WINDOW *, Board, int, int);
+bool	checkForWin(Board, int);
+void	destroyBoard(Board);
+unsigned long long int
+		getBitBoard(Board, int);
 
 Board newBoard() {
 	Board board = (Board)calloc(1, sizeof(struct board));

@@ -2,43 +2,65 @@
 #define __space_h
 
 #include <stdlib.h>
-#include "boolean.h"
 
 struct space {
-	char c;
-	Boolean (*isEmpty)(struct space *);
-	void (*put)(struct space *, char);
-	char (*get)(struct space *);
+	int		owner;
+	bool	winningTile;
+	bool	(*isSpaceEmpty)(struct space *);
+	void	(*isWinningTile)(struct space *, bool);
+	bool	(*hasWinningTile)(struct space *);
+	void	(*put)(struct space *, int);
+	int		(*getOwner)(struct space *);
+	void	(*destroySpace)(struct space *);
 };
 
 typedef struct space *Space;
 
 Space	newSpace();
-Boolean	isEmpty(Space);
-void	put(Space, char);
-char	get(Space);
+bool	isSpaceEmpty(Space);
+void	isWinningTile(Space, bool);
+bool	hasWinningTile(Space);
+void	put(Space, int);
+int		getOwner(Space);
+void	destroySpace(Space);
 
 Space newSpace() {
 	Space space = (Space)calloc(1, sizeof(struct space));
-	space->c = ' ';
+	space->owner = -1;
+	space->winningTile = FALSE;
 
-	space->isEmpty = isEmpty;
+	space->isSpaceEmpty = isSpaceEmpty;
+	space->isWinningTile = isWinningTile;
+	space->hasWinningTile = hasWinningTile;
 	space->put = put;
-	space->get = get;
+	space->getOwner = getOwner;
+	space->destroySpace = destroySpace;
 
 	return space;
 }
 
-Boolean isEmpty(Space s) {
-	return s->c == ' ';
+bool isSpaceEmpty(Space s) {
+	return s->owner == -1;
 }
 
-void put(Space s, char c) {
-	s->c = c;
+void isWinningTile(Space s, bool isWinning) {
+	s->winningTile = isWinning;
 }
 
-char get(Space s) {
-	return s->c;
+bool hasWinningTile(Space s) {
+	return s->winningTile;
+}
+
+void put(Space s, int player) {
+	s->owner = player;
+}
+
+int getOwner(Space s) {
+	return s->owner;
+}
+
+void destroySpace(Space s) {
+	free(s);
 }
 
 #endif
