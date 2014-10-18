@@ -43,20 +43,22 @@ int main() {
 			if(player->doMove(player, key)) {
 				/* Pass turn to AI */
 				current = ai->player;
+				ungetch('a'); /* Skip the next keystroke and instantly go to the AI */
 			}
 		} else {
 			ai->doAIMove(ai);
 			if(ai->player->doMove(ai->player, key)) {
 				/* Pass turn to AI */
 				current = player;
+				ungetch('a'); /* Skip the next keystroke and instantly go to the AI */
 			}
 		}
 
 		boardDraw(board);
-		current->doMove(current, 0);
 		statusDraw(status, current, ai);
 
 		if(board->isBoardFull(board)) {
+			getch();
 			wmove(status, 13, 1); wclrtoeol(status);
 			wattron(status, A_BOLD);
 			wprintw(status, "Draw Game!");
@@ -69,6 +71,7 @@ int main() {
 		if(board->checkForWin(board, current->getID(current))) {
 			int pid = current->getID(current);
 
+			getch();
 			wmove(status, 13, 1); wclrtoeol(status);
 			wattron(status, A_BOLD | COLOR_PAIR(pid));
 			wprintw(status, "%s", (pid == 1)?"Player":"AI");
