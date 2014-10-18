@@ -3,7 +3,7 @@
 
 #include "board.h"
 
-typedef enum {PLAYER, AI} PlayerType;
+typedef enum {PLAYER, AI_PLAYER} PlayerType;
 
 struct player {
 	int			id;
