@@ -5,20 +5,33 @@
 #include "player.h"
 #include "board.h"
 
-struct ai {
-	Player	player;
-	char	status[80];
-	int		(*doAIMove)(struct ai *);
-	int		(*findThreats)(struct ai *, int *);
-	char *	(*getStatus)(struct ai *);
+typedef enum {NO_THREAT, ODD, EVEN} Parity;
+
+struct thought {
+	int		threats[7];
+	Parity	parity[7];
 };
 
+struct ai {
+	Player			player;
+	struct thought	*t;
+	char			status[80];
+	int				(*doAIMove)(struct ai *);
+	int				(*findThreats)(struct ai *, int *);
+	void			(*setStatus)(struct ai *, char *);
+	char *			(*getStatus)(struct ai *);
+	void			(*destroyAI)(struct ai *);
+};
+
+typedef struct thought *Thoughts;
 typedef struct ai *AI;
 
 AI		newAI(Board);
 int		doAIMove(AI);
 int		findThreats(AI, int *);
+void	setStatus(AI, char *);
 char *	getStatus(AI);
+void	destroyAI(AI);
 /* Heuristic Functions */
 bool	testHorizontal(Board, int, int, int);
 bool	testVertical(Board, int, int, int);
@@ -28,31 +41,33 @@ bool	testNegDiagonal(Board, int, int, int);
 int		getBottomMostSpace(Board, int);
 /* Function Macros */
 #define validateSpace(c, p) (c->isSpaceEmpty(c) || c->getOwner(c) != p)
+#define setParity(ai, col, x) (ai->t->parity[col] = ((7-(x+1))%2 == 0)?EVEN:ODD)
 
 AI newAI(Board b) {
 	AI ai = (AI)calloc(1, sizeof(struct ai));
 	Player player = newPlayer(2, AI_PLAYER, b);
+	Thoughts t = (Thoughts)calloc(1, sizeof(struct thought));
 
 	ai->player = player;
+	ai->t = t;
 
 	ai->doAIMove = doAIMove;
 	ai->findThreats = findThreats;
+	ai->setStatus = setStatus;
 	ai->getStatus = getStatus;
 
 	return ai;
 }
 
-
 int doAIMove(AI ai) {
-	int col[7] = {0, 0, 0, 0, 0, 0, 0};
 	int x, threatsFound;
-	char temp[10];
+	char temp[3];
 
-	threatsFound = findThreats(ai, col);
+	threatsFound = findThreats(ai, ai->t->threats);
 
 	strcpy(ai->status, "");
 	for(x = 0; x < 7; x++) {
-		strcat(ai->status, itoa(col[x], temp, 10));
+		strcat(ai->status, itoa(ai->t->threats[x], temp, 10));
 		strcat(ai->status, " ");
 	}
 	strcat(ai->status, "F: ");
@@ -65,7 +80,8 @@ int findThreats(AI ai, int *columns) {
 	int i, found = 0, open;
 	Board b = ai->player->b;
 
-	for(i = 0; i < 6; i++) {
+	for(i = 0; i < 7; i++) {
+		ai->t->parity[i] = NO_THREAT;
 		open = getBottomMostSpace(b, i);
 
 		if(open < 0) continue;
@@ -73,14 +89,26 @@ int findThreats(AI ai, int *columns) {
 		if(testVertical(b, 1, open, i)) columns[i] += 2;
 		if(testPosDiagonal(b, 1, open, i)) columns[i] += 4;
 		if(testNegDiagonal(b, 1, open, i)) columns[i] += 8;
-		if(columns[i] != 0) found++;
+		if(columns[i] != 0) {
+			setParity(ai, i, open);
+			found++;
+		}
 	}
 
 	return found;
 }
 
+void setStatus(AI ai, char *str) {
+	strcpy(ai->status, str);
+}
+
 char * getStatus(AI ai) {
 	return ai->status;
+}
+
+void destroyAI(AI ai) {
+	free(ai->player);
+	free(ai->t);
 }
 
 bool testHorizontal(Board b, int player, int x, int y) {
